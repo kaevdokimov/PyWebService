@@ -1,11 +1,11 @@
-from typing import Dict, List, Optional, Annotated
+from typing import Annotated, Dict, List, Optional
 
+from fastapi import Body, FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, HTTPException, Path, Query, Body
 from starlette.middleware.gzip import GZipMiddleware
 
 from enums import ApiSection
-from shemas import PostResponse, PostCreateRequest, UserResponse, UserCreateRequest
+from shemas import PostCreateRequest, PostResponse, UserCreateRequest, UserResponse
 
 app = FastAPI()
 
@@ -49,9 +49,11 @@ async def get_posts() -> List[PostResponse]:
 
 
 @app.get("/posts/{id}", tags=[ApiSection.posts], response_model=PostResponse)
-async def get_post(id: Annotated[int, Path(..., title="ID поста", ge=1, lt=100)]) -> PostResponse:
+async def get_post(post_id: Annotated[int,
+Path(..., title="ID поста", ge=1, lt=100)]
+                   ) -> PostResponse:
 	for post in posts:
-		if post["id"] == id:
+		if post["id"] == post_id:
 			return PostResponse(**post)
 
 	raise HTTPException(status_code=404, detail="Post not found")
@@ -67,7 +69,8 @@ Body(..., example={"title": "Заголовок поста", "body": "Текст
 	new_post = PostResponse(
 		id=max_id + 1,
 		title=post_create_request.title,
-		body=post_create_request.body
+		body=post_create_request.body,
+		author_id=post_create_request.author_id
 	)
 
 	posts.append(new_post.model_dump())
@@ -95,9 +98,10 @@ async def get_users() -> List[UserResponse]:
 
 
 @app.get("/users/{id}", tags=[ApiSection.users], response_model=UserResponse)
-async def get_user(id: Annotated[int, Path(..., title="ID пользователя", ge=1, lt=100)]) -> UserResponse:
+async def get_user(user_id: Annotated[int,
+Path(..., title="ID пользователя", ge=1, lt=100)]) -> UserResponse:
 	for user in users:
-		if user["id"] == id:
+		if user["id"] == user_id:
 			return UserResponse(**user)
 
 	raise HTTPException(status_code=404, detail="User not found")
@@ -105,7 +109,9 @@ async def get_user(id: Annotated[int, Path(..., title="ID пользовател
 
 @app.post("/users", tags=[ApiSection.users], response_model=UserResponse)
 async def create_user(user_create_response: Annotated[
-	UserCreateRequest, Body(..., example={"name": "Ivan", "surname": "Ivanov", "age": 17})]) -> UserResponse:
+	UserCreateRequest,
+	Body(..., example={"name": "Ivan", "surname": "Ivanov", "age": 17})]
+                      ) -> UserResponse:
 	# Находим максимальный id
 	max_id = max((user["id"] for user in users), default=0)
 

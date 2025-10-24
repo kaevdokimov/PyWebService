@@ -1,0 +1,27 @@
+[MASTER]
+ignore=venv,.venv,env
+extension-pkg-whitelist=
+
+[MESSAGES CONTROL]
+disable=
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    R0903,  # too-few-public-methods (common for Pydantic models)
+    R0801,  # duplicate-code (not critical for small demo)
+    C0103,  # invalid-name (allow short names in examples)
+    W1203,  # logging-fstring-interpolation (we may use f-strings)
+    W0718   # broad-exception-caught (for simplicity in samples)
+
+[FORMAT]
+max-line-length=150
+indent-string='\t'
+
+[TYPECHECK]
+ignored-modules=fastapi,starlette,pydantic
+
+[REPORTS]
+output-format=colorized
+
+[DESIGN]
+max-args=6
