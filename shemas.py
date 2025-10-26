@@ -1,4 +1,5 @@
 from typing import Annotated
+
 from pydantic import BaseModel, Field
 
 
@@ -16,7 +17,7 @@ class UserResponse(UserBase):
 	id: Annotated[int, Field(title="ID пользователя", ge=1)] = Field()
 
 	class Config:
-		orm_mode = True
+		from_attributes = True
 
 
 class PostBase(BaseModel):
@@ -33,4 +34,4 @@ class PostResponse(PostBase):
 	id: Annotated[int, Field(title="ID поста", description="ID поста", ge=1)] = Field()
 
 	class Config:
-		orm_mode = True
+		from_attributes = True

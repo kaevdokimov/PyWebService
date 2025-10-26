@@ -1,13 +1,27 @@
+from contextlib import asynccontextmanager
 from typing import Annotated, Dict, List, Optional
 
-from fastapi import Body, FastAPI, HTTPException, Path, Query
+from fastapi import Body, Depends, FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from starlette.middleware.gzip import GZipMiddleware
 
+from database import get_db, init_db, Post, User
 from enums import ApiSection
 from shemas import PostCreateRequest, PostResponse, UserCreateRequest, UserResponse
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+	try:
+		init_db()
+		yield
+	except Exception as e:
+		print(f"Ошибка инициализации базы данных: {e}")
+		raise
+
+
+app = FastAPI(lifespan=lifespan)
 
 origins = [
 	"http://localhost:8080",
@@ -26,102 +40,100 @@ app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=7)
 
 @app.get("/")
 async def home() -> Dict[str, str]:
-	return {"Hello": "World"}
-
-
-posts = [
-	{"id": 1, "title": "Post 1", "body": "1. Lorem ipsum dolor sit amet", "author_id": 1},
-	{"id": 2, "title": "Post 2", "body": "2. Lorem ipsum dolor sit amet", "author_id": 2},
-	{"id": 3, "title": "Post 3", "body": "3. Lorem ipsum dolor sit amet", "author_id": 3},
-]
-
-users = [
-	{"id": 1, "name": "Ivan", "surname": "Ivanov", "age": 17},
-	{"id": 2, "name": "Petr", "surname": "Petrov", "age": 27},
-	{"id": 3, "name": "Sidor", "surname": "Sidorov", "age": 47},
-]
+	return {"Привет": "Мир"}
 
 
 ### Posts action
 @app.get("/posts", tags=[ApiSection.posts], response_model=List[PostResponse])
-async def get_posts() -> List[PostResponse]:
-	return [PostResponse(**post) for post in posts]
+async def get_posts(db: Session = Depends(get_db)) -> list[type[Post]]:
+	posts = db.query(Post).all()
+	return posts
 
 
-@app.get("/posts/{id}", tags=[ApiSection.posts], response_model=PostResponse)
-async def get_post(post_id: Annotated[int,
-Path(..., title="ID поста", ge=1, lt=100)]
-                   ) -> PostResponse:
-	for post in posts:
-		if post["id"] == post_id:
-			return PostResponse(**post)
-
-	raise HTTPException(status_code=404, detail="Post not found")
+@app.get("/posts/{post_id}", tags=[ApiSection.posts], response_model=PostResponse)
+async def get_post(
+		post_id: Annotated[int, Path(..., title="ID поста", ge=1, lt=100)],
+		db: Session = Depends(get_db)
+) -> type[Post]:
+	post = db.query(Post).filter(Post.id == post_id).first()
+	if post is None:
+		raise HTTPException(status_code=404, detail="Пост не найден")
+	return post
 
 
 @app.post("/posts", tags=[ApiSection.posts], response_model=PostResponse)
-async def create_post(post_create_request: Annotated[PostCreateRequest,
-Body(..., example={"title": "Заголовок поста", "body": "Текст поста"})]) -> PostResponse:
-	# Находим максимальный id
-	max_id = max((post["id"] for post in posts), default=0)
-
-	# Создаем объект Post с новым id
-	new_post = PostResponse(
-		id=max_id + 1,
+async def create_post(
+		post_create_request: Annotated[
+			PostCreateRequest,
+			Body(..., example={"title": "Название поста", "body": "Текст поста"})
+		],
+		db: Session = Depends(get_db)
+) -> Post:
+	db_post = Post(
 		title=post_create_request.title,
 		body=post_create_request.body,
 		author_id=post_create_request.author_id
 	)
 
-	posts.append(new_post.model_dump())
-	return new_post
+	db.add(db_post)
+	db.commit()
+	db.refresh(db_post)
+	return db_post
 
 
 @app.get("/search", tags=[ApiSection.posts], response_model=PostResponse)
-async def search(post_id: Annotated[
-	Optional[int],
-	Query(title="ID поста для поиска", description="ID поста для поиска", ge=1, lt=100)
-]
-                 ) -> PostResponse:
+async def search(
+		post_id: Annotated[
+			Optional[int],
+			Query(title="ID поста для поиска", description="ID поста для поиска", ge=1, lt=100)
+		],
+		db: Session = Depends(get_db)
+) -> type[Post]:
 	if post_id:
-		for post in posts:
-			if post["id"] == post_id:
-				return PostResponse(**post)
+		post = db.query(Post).filter(Post.id == post_id).first()
+		if post is None:
+			raise HTTPException(status_code=404, detail="Пост не найден")
+		return post
 
-	raise HTTPException(status_code=404, detail="Post not found")
+	raise HTTPException(status_code=404, detail="Пост не найден")
 
 
 ### Users action
 @app.get("/users", tags=[ApiSection.users], response_model=List[UserResponse])
-async def get_users() -> List[UserResponse]:
-	return [UserResponse(**user) for user in users]
+async def get_users(db: Session = Depends(get_db)) -> list[type[User]]:
+	users = db.query(User).all()
+	return users
 
 
-@app.get("/users/{id}", tags=[ApiSection.users], response_model=UserResponse)
-async def get_user(user_id: Annotated[int,
-Path(..., title="ID пользователя", ge=1, lt=100)]) -> UserResponse:
-	for user in users:
-		if user["id"] == user_id:
-			return UserResponse(**user)
-
-	raise HTTPException(status_code=404, detail="User not found")
+@app.get("/users/{user_id}", tags=[ApiSection.users], response_model=UserResponse)
+async def get_user(
+		user_id: Annotated[
+			int,
+			Path(..., title="ID пользователя", ge=1, lt=100)
+		],
+		db: Session = Depends(get_db)
+) -> type[User]:
+	user = db.query(User).filter(User.id == user_id).first()
+	if user is None:
+		raise HTTPException(status_code=404, detail="Пользователь не найден")
+	return user
 
 
 @app.post("/users", tags=[ApiSection.users], response_model=UserResponse)
-async def create_user(user_create_response: Annotated[
-	UserCreateRequest,
-	Body(..., example={"name": "Ivan", "surname": "Ivanov", "age": 17})]
-                      ) -> UserResponse:
-	# Находим максимальный id
-	max_id = max((user["id"] for user in users), default=0)
-
-	# Создаем объект User с новым id
-	new_user = UserResponse(
-		id=max_id + 1,
+async def create_user(
+		user_create_response: Annotated[
+			UserCreateRequest,
+			Body(..., example={"name": "Ivan", "surname": "Ivanov", "age": 17})
+		],
+		db: Session = Depends(get_db)
+) -> User:
+	db_user = User(
 		name=user_create_response.name,
 		surname=user_create_response.surname,
 		age=user_create_response.age
 	)
 
-	users.append(new_user.model_dump())
-	return new_user
+	db.add(db_user)
+	db.commit()
+	db.refresh(db_user)
+	return db_user
