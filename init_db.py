@@ -12,15 +12,12 @@ def initialize_database():
 	try:
 		# Инициализация базы данных
 		init_db()
-		
 		# Получить сессию базы данных
 		db_gen = get_db()
 		db = next(db_gen)
-		
 		# Проверка существующих данных
 		existing_sources = db.query(NewsSource).count()
 		existing_news = db.query(NewsItem).count()
-		
 		if existing_sources == 0 and existing_news == 0:
 			# Демо-данные источников
 			sources_data = [

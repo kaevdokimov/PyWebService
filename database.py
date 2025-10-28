@@ -37,7 +37,6 @@ class NewsSource(Base):
 	last_parsed_at = Column(DateTime, nullable=True)
 	updated_at = Column(DateTime, nullable=True)
 	country = Column(String(10), nullable=False, default='rus')
-	
 	# Связь с новостями
 	news_items = relationship("NewsItem", back_populates="source")
 
