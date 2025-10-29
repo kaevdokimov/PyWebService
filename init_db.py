@@ -43,15 +43,15 @@ def initialize_database():
 					"country": "usa"
 				}
 			]
-			
+
 			sources = []
 			for source_data in sources_data:
 				source = NewsSource(**source_data)
 				db.add(source)
 				sources.append(source)
-			
+
 			db.commit()
-			
+
 			# Демо-данные новостей
 			news_data = [
 				{
@@ -82,16 +82,16 @@ def initialize_database():
 					"source_id": sources[2].id
 				}
 			]
-			
+
 			for news_item_data in news_data:
 				news_item = NewsItem(**news_item_data)
 				db.add(news_item)
-			
+
 			db.commit()
 			logger.info("База данных инициализирована с демо-данными!")
 		else:
 			logger.info("База данных уже содержит данные. Пропуск инициализации.")
-	
+
 	except Exception as e:
 		logger.error(f"Error initializing database: {e}")
 		raise

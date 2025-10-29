@@ -12,11 +12,11 @@ def test_db():
 	try:
 		# Инициализация базы данных
 		init_db()
-		
+
 		# Получить сессию базы данных
 		db_gen = get_db()
 		db = next(db_gen)
-		
+
 		# Создание источника новостей
 		source = NewsSource(
 			name="Тестовый источник",
@@ -29,7 +29,7 @@ def test_db():
 		db.commit()
 		db.refresh(source)
 		logger.info(f"Создан источник: {source.name}, id {source.id}")
-		
+
 		# Создание новости
 		news_item = NewsItem(
 			title="Тестовая новость",
@@ -45,20 +45,20 @@ def test_db():
 		db.commit()
 		db.refresh(news_item)
 		logger.info(f"Создана новость: {news_item.title}, id {news_item.id}")
-		
+
 		sources = db.query(NewsSource).all()
 		logger.info(f"Всего источников: {len(sources)}")
-		
+
 		news_items = db.query(NewsItem).all()
 		logger.info(f"Всего новостей: {len(news_items)}")
-		
+
 		# Очистка тестовых данных
 		db.delete(news_item)
 		db.delete(source)
 		db.commit()
-		
+
 		logger.info("Тест завершился успешно!")
-	
+
 	except Exception as e:
 		logger.error(f"Error in database test: {e}")
 		raise

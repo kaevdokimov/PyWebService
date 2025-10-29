@@ -74,15 +74,15 @@ async def get_news(
 	"""
 	try:
 		query = db.query(NewsItem)
-		
+
 		# Фильтрация по периоду
 		if period:
 			query = apply_date_filter(query, period)
-		
+
 		# Пагинация
 		offset = (page - 1) * size
 		news_items = query.order_by(NewsItem.published_at.desc()).offset(offset).limit(size).all()
-		
+
 		return news_items
 	except Exception as e:
 		logger.error(f"Ошибка при получении новостей: {e}")
@@ -92,7 +92,7 @@ async def get_news(
 def apply_date_filter(query, period: str):
 	"""Применить фильтрацию по дате к запросу на основе периода"""
 	now = datetime.now()
-	
+
 	if period == "today":
 		start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
 		end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -116,15 +116,15 @@ def apply_date_filter(query, period: str):
 		days_since_monday = today.weekday()
 		start_of_last_week = today - timedelta(days=days_since_monday + 7)
 		end_of_last_week = start_of_last_week + timedelta(days=6)
-		
+
 		start_datetime = datetime.combine(start_of_last_week, datetime.min.time())
 		end_datetime = datetime.combine(end_of_last_week, datetime.max.time())
-		
+
 		query = query.filter(and_(
 			NewsItem.published_at >= start_datetime,
 			NewsItem.published_at <= end_datetime
 		))
-	
+
 	return query
 
 
@@ -171,7 +171,7 @@ async def get_sources_with_counts(
 			NewsSource,
 			select(func.count.select(table(NewsSource.__tablename__, NewsItem.id)).label('news_count'))
 		).outerjoin(NewsItem, NewsSource.id == NewsItem.source_id).group_by(NewsSource.id).all()
-		
+
 		result = []
 		for source, news_count in sources_with_counts:
 			source_dict = {
@@ -187,7 +187,7 @@ async def get_sources_with_counts(
 				"news_count": news_count or 0
 			}
 			result.append(source_dict)
-		
+
 		return result
 	except Exception as e:
 		logger.error(f"Ошибка при получении источников новостей: {e}")

@@ -55,7 +55,7 @@ class NewsItem(Base):
 	published_at = Column(DateTime, nullable=False)
 	created_at = Column(DateTime, nullable=False, default=func.now)
 	updated_at = Column(DateTime, nullable=True)
-	
+
 	# Связь с источником новостей
 	source = relationship("NewsSource", back_populates="news_items")
 
